@@ -1,0 +1,10 @@
+{
+"type": "FeatureCollection",
+"name": "geo_22_夜間対応型訪問介護",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "緯度": 34.998143717263012, "経度": 138.4073286012329, "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2294200148-00&ServiceCd=710&Type=search", "url2": "https://www.akutagawa-heartlife.jp", "内容": "アクタガワ　ハートライフ千代田【夜間対応型訪問介護】静岡市葵区千代田6－14－7", "サービスの種類": "夜間対応型訪問介護" }, "geometry": { "type": "Point", "coordinates": [ 138.407328601232905, 34.998143717263012 ] } },
+{ "type": "Feature", "properties": { "緯度": 35.1069335, "経度": 139.0645304, "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2290500129-00&ServiceCd=710&Type=search", "url2": "http://www.izukaigo.com/", "内容": "伊豆介護センター熱海【夜間対応型訪問介護】静岡県熱海市緑ガ丘町9-7", "サービスの種類": "夜間対応型訪問介護" }, "geometry": { "type": "Point", "coordinates": [ 139.0645304, 35.1069335 ] } },
+{ "type": "Feature", "properties": { "緯度": 32.7880252, "経度": 129.8594489, "url": "https://www.kaigokensaku.mhlw.go.jp/22/index.php?action_kouhyou_detail_004_kani=true&JigyosyoCd=2290400262-00&ServiceCd=710&Type=search", "url2": "http://www.izukaigo.com/", "内容": "伊豆介護センター【夜間対応型訪問介護】音無町5-6伊豆介護センター", "サービスの種類": "夜間対応型訪問介護" }, "geometry": { "type": "Point", "coordinates": [ 129.8594489, 32.7880252 ] } }
+]
+}
