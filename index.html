@@ -1,16 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-
-<!-- GA4の計測タグ -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-R23Q109BZT"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-R23Q109BZT');
-</script>
-
 <meta charset="utf-8">
 <title>医療・介護施設マップ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -142,12 +132,12 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <span style="color:brown;">●</span>介護<br>
     【出典】<br>
     医療情報ネットのオープンデータ（厚生労働省）<br>
-    (2025年12月1日時点) <br>
+    (2025年12月1日現在) <br>
     <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryou/newpage_43373.html" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">厚生労働省の医療ページ</a>
     &nbsp;&nbsp;&nbsp;
     <a href="https://www.digital.go.jp/resources/open_data/public_data_license_v1.0" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">同利用規約</a><br>
     介護サービス情報のオープンデータ（厚生労働省）<br>
-    (2025年12月末時点)<br>
+    (2025年6月1日現在)<br>
     <a href="https://www.mhlw.go.jp/stf/kaigo-kouhyou_opendata.html" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">厚生労働省の介護ページ</a>
     &nbsp;&nbsp;&nbsp;
     <a href="https://www.mhlw.go.jp/chosakuken/index.html" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">同利用規約</a><br>
@@ -221,24 +211,6 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         center: [34.710233985604596, 137.70251668848428], zoom: 15, preferCanvas: true, zoomControl: false 
     });
 
-    // ★↓↓ ここに追加 ↓↓
-
-    function updateZoomIndicator() {
-        const zoom = map.getZoom();
-        document.getElementById('zoom-indicator').innerText = `Zoom: ${zoom}`;
-    }
-
-    // 初期表示時に1回実行
-    updateZoomIndicator();
-
-    // ズーム変更時に更新
-    map.on('zoomend', updateZoomIndicator);
-
-    // ★↑↑ ここまで追加 ↑↑    
-
-
-    
-    
     map.on('click', () => {
       closeControlsPanel();
     });
@@ -1481,12 +1453,31 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     // 初期読み込み実行
     for(let i=1; i<=13; i++) { loadChome(i.toString().padStart(2, '0')); }
 
+    // 5. インタラクション制御
+    function updateVisibility() {
+        const zoom = map.getZoom();
+        document.getElementById('zoom-indicator').innerText = `Zoom: ${zoom}`;
+        for (let label in layerGroups) {
+            if (label.includes("町丁目境界")) continue;
+            const layer = layerGroups[label];
+            const cb = document.querySelector(`.layer-toggle[value="${label}"]`);
+            if (layer && cb) {
+                if (zoom <= 5) { 
+                    if (map.hasLayer(layer)) map.removeLayer(layer);
+                } else if (cb.checked) {
+                    if (!map.hasLayer(layer)) layer.addTo(map);
+                }
+            }
+        }
+    }
+    map.on('zoomend', updateVisibility);
+
     document.querySelectorAll('.layer-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
             const g = layerGroups[this.value];
             if (!g) return;
             if (this.checked) {
-                g.addTo(map);
+                if (this.value.includes("町丁目境界") || map.getZoom() > 14) g.addTo(map);
             } else {
                 map.removeLayer(g);
             }
@@ -1513,20 +1504,24 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
                         const layer = layerGroups[label];
 
+                          // ① レイヤーを必ず表示
+                          if (!map.hasLayer(layer)) {
+                              layer.addTo(map);
+
+                              // チェックボックスもON
+                              const cb = document.querySelector(`.layer-toggle[value="${label}"]`);
+                              if (cb) cb.checked = true;
+                          }
+
                           // ② 検索パネルを閉じる
                           const searchPanel = document.getElementById('search-panel');
                           searchPanel.style.display = 'none';
 
-                          // ③ 検索入力をクリアは今回は中止します
+                          // ③ 検索入力をクリア
                           const searchInput = document.getElementById('search-input');
-                          // 検索結果のクリア中止const searchResults = document.getElementById('search-results');
-                          // 検索文字のクリア中止searchInput.value = '';
-                          // 検索の中止searchResults.innerHTML = '';
-
-                          // ★ そのマーカーだけ表示
-                          if (!map.hasLayer(l)) {
-                              l.addTo(map);
-                          }
+                          const searchResults = document.getElementById('search-results');
+                          searchInput.value = '';
+                          searchResults.innerHTML = '';
 
                           // ④ ★ ソフトキーボードを確実に閉じる（超重要）
                           searchInput.blur();
