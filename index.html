@@ -232,7 +232,13 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     // 4. データ読み込み関数群
     function loadChome(idx) {
       fetch(`geo_0_町丁目境界${idx}.geojson`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            console.warn("境界ファイルがありません:", res.url);
+            return null;
+          }
+          return res.json();
+        })
         .then(data => {
 
           layerGroups[`町丁目境界${idx}`] = L.geoJSON(data, {
