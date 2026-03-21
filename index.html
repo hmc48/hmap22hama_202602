@@ -268,7 +268,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     function jumpToLocation() {
 
         const input = prompt(
-            "住所 施設または 緯度,経度 を入力してください\n例:\n品川区 〇〇区役所\n35.6094, 139.7303"
+            "【国土地理院の検索エンジンを使用しています】\n住所 施設または 緯度,経度 を入力してください\n例:\n品川区 〇〇区役所\n35.6094, 139.7303"
         );
 
         if (!input) return;
@@ -298,20 +298,21 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 .openPopup();
 
         } else {
-
+            // 国土地理院の地名検索APIを利用
             fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`
+                `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(input)}`
             )
             .then(res => res.json())
             .then(data => {
-
                 if (!data || data.length === 0) {
                     alert("住所が見つかりません");
                     return;
                 }
 
-                const lat = parseFloat(data[0].lat);
-                const lng = parseFloat(data[0].lon);
+                // 国土地理院APIの形式に合わせて緯度経度を取得
+                // 形式: data[0].geometry.coordinates -> [経度(lng), 緯度(lat)]
+                const lng = data[0].geometry.coordinates[0];
+                const lat = data[0].geometry.coordinates[1];
 
                 map.setView([lat, lng], 16);
 
@@ -322,9 +323,8 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
             .catch(() => {
                 alert("検索エラーが発生しました");
             });
-        }
-    }    
-
+        }                
+    
     // 4. データ読み込み関数群
     function loadChome(idx) {
       fetch(`geo_0_町丁目境界${idx}.geojson`)
