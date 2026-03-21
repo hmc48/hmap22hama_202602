@@ -263,69 +263,95 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 // =====================================================
 // 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
 // =====================================================
-    let inputMarker = null;
+// --- 検索入力を保持するためのグローバル変数 ---
+    let lastSearchInput = ""; 
 
     function jumpToLocation() {
-
-        const input = prompt(
-            "【国土地理院の検索エンジンを使用しています】\n住所 施設または 緯度,経度 を入力してください\n例:\n品川区 〇〇区役所\n35.6094, 139.7303"
+        // 1. まず場所を入力してもらう（前回の入力を保持）
+        let input = prompt(
+            "住所・施設名・緯度経度を入力してください
+（例: 中央病院 / 浜松市中央区...）",
+            lastSearchInput
         );
 
-        if (!input) return;
+       if (input === null) return; // キャンセル
+        lastSearchInput = input;
+        if (!input.trim()) return;
 
-        // 既存マーカー削除
+        // 2. 次に、どちらのエンジンで検索するか番号で選んでもらう
+        const engineChoice = prompt(
+            "どちらのエンジンで検索しますか？（番号を入力）
+
+1 : OSM (施設名・建物名に強い)
+2 : 国土地理院 (正確な住所に強い)",
+            "1"
+        );
+
+        if (engineChoice === null) return; // キャンセル
+
+        // 既存の検索用マーカーがあれば削除
         if (inputMarker) {
             map.removeLayer(inputMarker);
             inputMarker = null;
         }
 
-        // 緯度経度形式
+        // --- A. 緯度経度（数値,数値）が入力された場合 ---
         if (input.includes(",")) {
-
             const parts = input.split(",");
             const lat = parseFloat(parts[0]);
             const lng = parseFloat(parts[1]);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("緯度経度の形式が正しくありません");
+            if (!isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 16);
+                inputMarker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup(`直接指定座標:<br>${lat}, ${lng}`).openPopup();
                 return;
             }
+        }
 
-            map.setView([lat, lng], 16);
+        // --- B. 検索処理 ---
+        let url = "";
+        let engineLabel = "";
 
-            inputMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(input)
-                .openPopup();
-
+        if (engineChoice === "2") {
+            // 国土地理院
+            engineLabel = "国土地理院";
+            url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent("静岡県 " + input)}`;
         } else {
-            // 国土地理院の地名検索APIを利用
-            fetch(
-                `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent("静岡県 " + input)}`
-            )
+            // OSM (デフォルトまたは1の場合)
+            engineLabel = "OSM";
+            url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&q=${encodeURIComponent("静岡県 " + input)}&viewbox=137.4,35.3,139.2,34.5&bounded=0`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(data => {
                 if (!data || data.length === 0) {
-                    alert("住所が見つかりません");
+                    alert(engineLabel + "では見つかりませんでした。別の番号（エンジン）でも試してみてください。");
                     return;
                 }
 
-                // 国土地理院APIの形式に合わせて緯度経度を取得
-                // 形式: data[0].geometry.coordinates -> [経度(lng), 緯度(lat)]
-                const lng = data[0].geometry.coordinates[0];
-                const lat = data[0].geometry.coordinates[1];
+                let lat, lng, foundName;
+                if (engineChoice === "2") {
+                    lng = data[0].geometry.coordinates[0];
+                    lat = data[0].geometry.coordinates[1];
+                    foundName = data[0].properties.title;
+                } else {
+                    lat = parseFloat(data[0].lat);
+                    lng = parseFloat(data[0].lon);
+                    foundName = data[0].display_name;
+                }
 
                 map.setView([lat, lng], 16);
-
                 inputMarker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(input)
+                    .bindPopup(`<strong>${engineLabel} 検索結果:</strong><br>${foundName}`)
                     .openPopup();
             })
-            .catch(() => {
-                alert("検索エラーが発生しました");
+            .catch(err => {
+                console.error(err);
+                alert("検索エラーが発生しました。");
             });
-        }                
     }
-        
+
     // 4. データ読み込み関数群
     function loadChome(idx) {
       fetch(`geo_0_町丁目境界${idx}.geojson`)
