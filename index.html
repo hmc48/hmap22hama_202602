@@ -300,7 +300,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         } else {
             // 国土地理院の地名検索APIを利用
             fetch(
-                `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(input)}`
+                `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent("静岡県" +input)}`
             )
             .then(res => res.json())
             .then(data => {
