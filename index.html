@@ -263,90 +263,67 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 // =====================================================
 // 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
 // =====================================================
-// --- 検索入力を保持するためのグローバル変数 ---
-    let lastSearchInput = ""; 
+    let inputMarker = null;
 
     function jumpToLocation() {
-        // 1. まず場所を入力してもらう（前回の入力を保持）
-        let input = prompt(
-            "住所・施設名・緯度経度を入力してください\n（例: 中央病院 / 浜松市中央区...）",
-            lastSearchInput
+
+        const input = prompt(
+            "住所 施設または 緯度,経度 を入力してください\n例:\n品川区 〇〇区役所\n35.6094, 139.7303"
         );
 
-       if (input === null) return; // キャンセル
-        lastSearchInput = input;
-        if (!input.trim()) return;
+        if (!input) return;
 
-        // 2. 次に、どちらのエンジンで検索するか番号で選んでもらう
-        const engineChoice = prompt(
-            "どちらのエンジンで検索しますか？（番号を入力）\n\n1 : OSM (施設名・建物名に強い)\n2 : 国土地理院 (正確な住所に強い)",
-            "1"
-        );
-
-        if (engineChoice === null) return; // キャンセル
-
-        // 既存の検索用マーカーがあれば削除
+        // 既存マーカー削除
         if (inputMarker) {
             map.removeLayer(inputMarker);
             inputMarker = null;
         }
 
-        // --- A. 緯度経度（数値,数値）が入力された場合 ---
+        // 緯度経度形式
         if (input.includes(",")) {
+
             const parts = input.split(",");
             const lat = parseFloat(parts[0]);
             const lng = parseFloat(parts[1]);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                map.setView([lat, lng], 16);
-                inputMarker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`直接指定座標:<br>${lat}, ${lng}`).openPopup();
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert("緯度経度の形式が正しくありません");
                 return;
             }
-        }
 
-        // --- B. 検索処理 ---
-        let url = "";
-        let engineLabel = "";
+            map.setView([lat, lng], 16);
 
-        if (engineChoice === "2") {
-            // 国土地理院
-            engineLabel = "国土地理院";
-            url = `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent("静岡県 " + input)}`;
+            inputMarker = L.marker([lat, lng]).addTo(map)
+                .bindPopup(input)
+                .openPopup();
+
         } else {
-            // OSM (デフォルトまたは1の場合)
-            engineLabel = "OSM";
-            url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&q=${encodeURIComponent("静岡県 " + input)}&viewbox=137.4,35.3,139.2,34.5&bounded=0`;
-        }
 
-        fetch(url)
+            fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}`
+            )
             .then(res => res.json())
             .then(data => {
+
                 if (!data || data.length === 0) {
-                    alert(engineLabel + "では見つかりませんでした。別の番号（エンジン）でも試してみてください。");
+                    alert("住所が見つかりません");
                     return;
                 }
 
-                let lat, lng, foundName;
-                if (engineChoice === "2") {
-                    lng = data[0].geometry.coordinates[0];
-                    lat = data[0].geometry.coordinates[1];
-                    foundName = data[0].properties.title;
-                } else {
-                    lat = parseFloat(data[0].lat);
-                    lng = parseFloat(data[0].lon);
-                    foundName = data[0].display_name;
-                }
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
 
                 map.setView([lat, lng], 16);
+
                 inputMarker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`<strong>${engineLabel} 検索結果:</strong><br>${foundName}`)
+                    .bindPopup(input)
                     .openPopup();
             })
-            .catch(err => {
-                console.error(err);
-                alert("検索エラーが発生しました。");
+            .catch(() => {
+                alert("検索エラーが発生しました");
             });
-    }
+        }
+    }    
 
     // 4. データ読み込み関数群
     function loadChome(idx) {
