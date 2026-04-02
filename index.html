@@ -2,7 +2,6 @@
 <html lang="ja">
 <head>
 
-<!-- GA4の計測タグ -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-R23Q109BZT"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -39,23 +38,31 @@ body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #control-btn { top:15px; right:15px; background:#007bff; color:white; }
 #search-btn { top:75px; right:15px; background:#28a745; color:white; }
 #info-btn { top:135px; right:15px; background:#ff69b4; color:white; }
-#controls, #search-panel, #info-panel {
-  display:none; position:fixed; right:15px; width:220px; 
+#jump-btn { top:195px; right:15px; background:#ff9800; color:white; } /* ジャンプボタン位置調整 */
+#draw-btn { top:255px; right:15px; background:#6f42c1; color:white; } /* 描画ツールボタン */
+
+
+#controls, #search-panel, #info-panel, #draw-panel {
+  display:none; position:fixed; left:15px; width:220px; 
   background:white; padding:15px; border-radius:8px; z-index:2000;
   max-height:75vh; overflow-y:auto; box-shadow:0 4px 15px rgba(0,0,0,0.2);
 }
 #controls { top:70px; }
 #search-panel { top:130px; }
+#draw-panel { top:150px; } /* 描画パネル位置 */
 #info-panel { bottom:20px; left:20px; right:20px; width:auto; font-size:14px; z-index:3000; }
+
 .close-x { float: right; font-size: 30px; font-weight: bold; cursor: pointer; color: #888; }
 .section-title { font-weight:bold; margin-top:10px; border-bottom:1px solid #eee; }
 .layer-item { margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; }
 input[type="checkbox"], input[type="radio"] { margin-right: 10px; transform: scale(1.2); }
-button.menu-sub-btn { margin: 5px 1%; padding: 8px; width: 46%; font-size: 11px; }
-/* --- ここを修正：ボタンを横並びにする設定 --- */
-.btn-container { display: flex; gap: 5px; margin-bottom: 5px; }
-button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
-/* -------------------------------------- */
+
+.btn-container { display: flex; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
+button.menu-sub-btn { flex: 1; min-width: 45%; padding: 8px; font-size: 11px; cursor: pointer; }
+.draw-tool-btn { flex: 1; min-width: 30%; padding: 8px; font-size: 10px; cursor: pointer; border:1px solid #ccc; background:#f9f9f9; }
+.active-tool { background: #ffeb3b !important; border: 2px solid #f44336; }
+.color-swatch { width:22px; height:22px; display:inline-block; margin:2px; border:1px solid #ccc; cursor:pointer; border-radius:3px; }
+
 .search-item:hover { background:#f0f0f0; cursor:pointer; }
 </style>
 </head>
@@ -132,9 +139,56 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     <div id="search-results" style="max-height:200px; overflow-y:auto; margin-top:10px;"></div>
   </div>
   <div id="info-btn" class="circle-btn" onclick="togglePanel('info-panel')">i</div>
-  <div id="jump-btn" class="circle-btn"
-       style="top:195px; right:15px; background:#ff9800; color:white;"
-       onclick="jumpToLocation()">📍</div>
+  
+  <div id="draw-btn" class="circle-btn" onclick="togglePanel('draw-panel')">🎨</div>
+  <div id="draw-panel">
+    <span class="close-x" onclick="togglePanel('draw-panel')">×</span>
+    <div class="section-title">描画ツール</div>
+    <div class="btn-container" style="margin-top:5px;">
+      <button class="draw-tool-btn" id="tool-marker" onclick="setTool('marker')">📍点</button>
+      <button class="draw-tool-btn" id="tool-circle" onclick="setTool('circle')">⭕円</button>
+      <button class="draw-tool-btn" id="tool-line" onclick="setTool('line')">📏直線</button>
+      <button class="draw-tool-btn" id="tool-poly" onclick="setTool('poly')">多角形</button>
+      <button class="draw-tool-btn" id="tool-rect" onclick="setTool('rect')">⬜四角</button>
+      <button class="draw-tool-btn" id="tool-text" onclick="setTool('text')">Abc文字</button>
+      <button class="draw-tool-btn" id="tool-eraser" onclick="setTool('eraser')">消しゴム</button>
+    </div>
+    <button class="menu-sub-btn" style="width:100%; background:#ffebee;" onclick="clearDrawings()">描画全消去</button>
+
+    <div class="section-title">詳細設定</div>
+    <div style="background:#f9f9f9; padding:8px; border-radius:4px; font-size:12px; margin-top:5px;">
+      <div id="circle-options">
+        円半径: <input type="number" id="draw-radius" value="500" min="10" max="10000" style="width:60px;"> m
+      </div>
+
+      <div id="text-options" style="display:none; ...">
+        文字: <input type="text" id="draw-text-input" value="メモ" style="width:180px;"><br>
+        サイズ: <input type="number" id="draw-text-size" value="18" ...> px<br>
+        書体: <select id="draw-text-font"><option value="sans-serif">ゴシック</option><option value="serif">明朝体</option></select>
+      </div>
+    </div>
+
+    <div class="section-title">描画色</div>
+    <div id="color-palette" style="text-align:center;">
+      <div class="color-swatch" style="background:red; border:2px solid #333;" onclick="setDrawColor('red', this)"></div>
+      <div class="color-swatch" style="background:blue;" onclick="setDrawColor('blue', this)"></div>
+      <div class="color-swatch" style="background:green;" onclick="setDrawColor('green', this)"></div>
+      <div class="color-swatch" style="background:black;" onclick="setDrawColor('black', this)"></div>
+      <div class="color-swatch" style="background:orange;" onclick="setDrawColor('orange', this)"></div>
+      <div class="color-swatch" style="background:purple;" onclick="setDrawColor('purple', this)"></div>
+      <div class="color-swatch" style="background:brown;" onclick="setDrawColor('brown', this)"></div>
+      <div class="color-swatch" style="background:deeppink;" onclick="setDrawColor('deeppink', this)"></div>
+      <div class="color-swatch" style="background:cyan;" onclick="setDrawColor('cyan', this)"></div>
+      <div class="color-swatch" style="background:lime;" onclick="setDrawColor('lime', this)"></div>
+      <div class="color-swatch" style="background:gold;" onclick="setDrawColor('gold', this)"></div>
+      <div class="color-swatch" style="background:gray;" onclick="setDrawColor('gray', this)"></div>
+      <div class="color-swatch" style="background:navy;" onclick="setDrawColor('navy', this)"></div>
+      <div class="color-swatch" style="background:magenta;" onclick="setDrawColor('magenta', this)"></div>
+    </div>
+  </div>
+
+  <div id="jump-btn" class="circle-btn" onclick="jumpToLocation()">📍</div>
+  
   <div id="info-panel" onclick="this.style.display='none'">
     <strong>医療・介護施設マップ　　　　★閉じる★</strong><br>
     <span style="color:red;">★</span>病院
@@ -159,12 +213,8 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     地図種類変更、医療圏境界線表示<br>
     施設選択（各ページへリンク）<br>
     検索機能(and検索)<br>
-    and検索の例:内科 秋葉原　診療所<br>
     人口表示（境界線表示時）<br>
-    【利用規約・ご意見・ご感想・お問い合わせ】<br>
-    他都道府県は下記サイトへ<br>
-    本ツールは以下のサイトで作成しています。<br>
-    <a href="https://hmc48.github.io/" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">https://hmc48.github.io/</a><br>
+    【利用規約・お問い合わせ】<br>
     作成者:Mana48FanClub<br>
   </div>
   <div id="map"></div>
@@ -174,10 +224,8 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     const colorMap = {"赤": "red", "青": "blue", "オレンジ": "orange", "緑": "green", "茶": "brown", "黄": "yellow"};
     const shapeMap = {"病院": "star", "診療所": "heart", "歯科": "club", "助産院": "square", "薬局": "spade"};
 
-    // 1. レンダラーの初期化（Canvasを使用）
     const myRenderer = L.canvas({ padding: 0.5 });
 
-    // 2. カスタムマーカー定義（Canvas直接描画で高速化）
     L.CustomMarker = L.CircleMarker.extend({
         _updatePath: function () {
             const ctx = this._renderer._ctx;
@@ -219,252 +267,174 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         }
     });
 
-    // 3. 地図初期化
     const map = L.map('map', { 
         center: [34.710233985604596, 137.70251668848428], zoom: 15, preferCanvas: true, zoomControl: false 
     });
-
-    // ★↓↓ ここに追加 ↓↓
 
     function updateZoomIndicator() {
         const zoom = map.getZoom();
         document.getElementById('zoom-indicator').innerText = `Zoom: ${zoom}`;
     }
-
-    // 初期表示時に1回実行
     updateZoomIndicator();
-
-    // ズーム変更時に更新
     map.on('zoomend', updateZoomIndicator);
 
-    // ★↑↑ ここまで追加 ↑↑    
-
-
-    
-    
-    map.on('click', () => {
-      closeControlsPanel();
-    });
-    
     const baseLayers = {
       "標準": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19 }),
       "国土地理院地図": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 18 }),
       "航空写真": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { maxZoom: 21, maxNativeZoom: 18 })
     };
     baseLayers["標準"].addTo(map);
-      const creditText = {
-      "標準": "© OpenStreetMap",
-      "航空写真": "© 国土地理院（航空写真）",
-      "国土地理院地図": "© 国土地理院"
-    };
+    const creditText = { "標準": "© OpenStreetMap", "航空写真": "© 国土地理院（航空写真）", "国土地理院地図": "© 国土地理院" };
 
     const layerGroups = {};
 
-// =====================================================
-// 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
-// =====================================================
-    let inputMarker = null;
-    let lastJumpInput = ""; // ★ここに追加：入力値を保存する変数
+// --- 描画ロジック ---
+let currentTool = null;
+    let currentColor = 'red';
+    let drawLayerGroup = L.layerGroup().addTo(map);
+    let tempPoints = [];
+    let tempPolyline = null;
 
-    function jumpToLocation() {
-
-        const input = prompt(
-            "【注意事項】\nオープンストリートマップの検索は、精度が十分でない場合があり、意図しない場所に移動することがあります。あらかじめご了承ください。\n【入力方法】\n住所 施設または 緯度,経度 を入力してください。\n例:\n品川区 〇〇区役所\n35.6094, 139.7303",lastJumpInput
-        );
-
-        if (!input) return;
-
-        lastJumpInput = input;
-
-
-        // 既存マーカー削除
-        if (inputMarker) {
-            map.removeLayer(inputMarker);
-            inputMarker = null;
-        }
-
-        // 緯度経度形式
-        if (input.includes(",")) {
-
-            const parts = input.split(",");
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-
-            if (isNaN(lat) || isNaN(lng)) {
-                alert("緯度経度の形式が正しくありません");
-                return;
-            }
-
-            map.setView([lat, lng], 16);
-
-            inputMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(input)
-                .openPopup();
-
+    function setTool(tool) {
+        currentTool = (currentTool === tool) ? null : tool;
+        document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active-tool'));
+        if(currentTool) {
+            document.getElementById('tool-' + tool).classList.add('active-tool');
+            map.doubleClickZoom.disable(); 
         } else {
+            map.doubleClickZoom.enable();
+        }
+        document.getElementById('text-options').style.display = (currentTool === 'text') ? 'block' : 'none';
+        document.getElementById('circle-options').style.display = (currentTool === 'circle') ? 'block' : 'none';
+        resetTemp();
+    }
 
-        fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&limit=30&accept-language=ja&q=${encodeURIComponent(input)}`
-        )
-        .then(res => res.json())
-        .then(data => {
+    function resetTemp() {
+        tempPoints = [];
+        if(tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
+    }
 
-            if (!data || data.length === 0) {
-                alert("住所が見つかりません");
-                return;
-            }
+    // 消しゴム機能：図形をクリックした時に消去する共通処理
+    function addEraserEvent(layer) {
+        layer.on('click', (e) => {
+            if(currentTool === 'eraser') drawLayerGroup.removeLayer(layer);
+        });
+    }
 
-            // ▼ 候補表示ボックス
-            const resultsDiv = document.createElement("div");
-            resultsDiv.style.position = "fixed";
-            resultsDiv.style.top = "50%";
-            resultsDiv.style.left = "50%";
-            resultsDiv.style.transform = "translate(-50%, -50%)";
-            resultsDiv.style.background = "white";
-            resultsDiv.style.padding = "15px";
-            resultsDiv.style.paddingTop = "35px";   // ★ 重要：×ボタン分の余白
-            resultsDiv.style.zIndex = "5000";
-            resultsDiv.style.maxHeight = "300px";
-            resultsDiv.style.overflowY = "auto";
-            resultsDiv.style.border = "1px solid #ccc";
-            resultsDiv.style.borderRadius = "8px";  // ★ 見た目改善
+    function undoLast() {
+        const layers = drawLayerGroup.getLayers();
+        if (layers.length > 0) drawLayerGroup.removeLayer(layers[layers.length - 1]);
+    }
 
-            // =========================
-            // ★ 右上の × ボタン
-            // =========================
-            const closeX = document.createElement("div");
-            closeX.innerText = "×";
-            closeX.style.position = "absolute";
-            closeX.style.top = "5px";
-            closeX.style.right = "10px";
-            closeX.style.cursor = "pointer";
-            closeX.style.fontSize = "22px";
-            closeX.style.fontWeight = "bold";
+    function clearDrawings() { if(confirm('全消去しますか？')) drawLayerGroup.clearLayers(); }
 
-            // 見やすく（おすすめ）
-            closeX.style.background = "white";
-            closeX.style.padding = "2px 8px";
-            closeX.style.borderRadius = "4px";
-            closeX.style.boxShadow = "0 1px 3px rgba(0,0,0,0.3)";
-
-            closeX.onclick = () => {
-                document.body.removeChild(resultsDiv);
-            };
-
-            resultsDiv.appendChild(closeX);
-
-            // =========================
-            // ★ 候補リスト
-            // =========================
-            data.forEach(place => {
-
-                const item = document.createElement("div");
-                item.style.padding = "8px";
-                item.style.borderBottom = "1px solid #eee";
-                item.style.cursor = "pointer";
-
-                item.innerText = place.display_name;
-
-                item.onclick = () => {
-
-                    const lat = parseFloat(place.lat);
-                    const lng = parseFloat(place.lon);
-
-                    map.setView([lat, lng], 16);
-
-                    inputMarker = L.marker([lat, lng]).addTo(map)
-                        .bindPopup(place.display_name)
-                        .openPopup();
-
-                    document.body.removeChild(resultsDiv);
-                };
-
-                resultsDiv.appendChild(item);
-            });
-
-            // =========================
-            // ★ 下の「閉じる」ボタン（既存維持）
-            // =========================
-            const closeBtn = document.createElement("div");
-            closeBtn.innerText = "閉じる";
-            closeBtn.style.marginTop = "10px";
-            closeBtn.style.textAlign = "center";
-            closeBtn.style.cursor = "pointer";
-
-            closeBtn.onclick = () => {
-                document.body.removeChild(resultsDiv);
-            };
-
-            resultsDiv.appendChild(closeBtn);
-
-            document.body.appendChild(resultsDiv);
-        })
-        .catch(() => {
-            alert("検索エラーが発生しました");
+    function setDrawColor(color, el) {
+        // 1. 選択された色をシステム変数に代入
+        currentColor = color;
+        
+        // 2. 画面上のすべての色ボタン（.color-swatchクラスを持つ要素）をリセット
+        document.querySelectorAll('.color-swatch').forEach(s => {
+            s.style.border = '1px solid #ccc';  // 枠を細く戻す
+            s.style.transform = 'scale(1.0)';    // サイズを元に戻す
+            s.style.zIndex = '1';                // 重なり順を普通に戻す
         });
         
+        // 3. 今クリックされたボタン（el）だけを目立たせる
+        el.style.border = '3px solid #333';     // 枠を太くして強調
+        el.style.transform = 'scale(1.2)';       // 少し大きくして強調
+        el.style.zIndex = '10';                  // 他のボタンより前面に出す
+    }
+
+
+    map.on('click', (e) => {
+        if(!currentTool || currentTool === 'eraser') return;
+        
+        let newLayer;
+        if(currentTool === 'marker') {
+            newLayer = L.marker(e.latlng).addTo(drawLayerGroup);
+        } else if(currentTool === 'circle') {
+            const r = document.getElementById('draw-radius').value;
+            newLayer = L.circle(e.latlng, { radius: Number(r), color: currentColor, fillOpacity: 0.2 }).addTo(drawLayerGroup);
+        } else if(currentTool === 'text') {
+            const txt = document.getElementById('draw-text-input').value;
+            const size = document.getElementById('draw-text-size').value;
+            const font = document.getElementById('draw-text-font').value;
+            const icon = L.divIcon({
+                className: 'draw-txt',
+                html: `<div style="color:${currentColor}; font-family:${font}; font-size:${size}px; font-weight:bold; white-space:nowrap; text-shadow:1px 1px 1px #fff;">${txt}</div>`,
+                iconSize: [0, 0]
+            });
+            newLayer = L.marker(e.latlng, { icon: icon }).addTo(drawLayerGroup);
+        } else if(currentTool === 'line' || currentTool === 'poly' || currentTool === 'rect') {
+            tempPoints.push(e.latlng);
+            if(currentTool === 'rect' && tempPoints.length === 2) {
+                newLayer = L.rectangle(tempPoints, { color: currentColor, weight: 2 }).addTo(drawLayerGroup);
+                tempPoints = [];
+            } else {
+                if(tempPolyline) map.removeLayer(tempPolyline);
+                tempPolyline = L.polyline(tempPoints, {color: currentColor, dashArray: '5, 5', weight: 2}).addTo(map);
+            }
         }
-    }    
+        if(newLayer) addEraserEvent(newLayer);
+    });
 
-    // 4. データ読み込み関数群
+    map.on('dblclick', (e) => {
+        if (!currentTool) return;
+        if (currentTool === 'line' || currentTool === 'poly') {
+            tempPoints.pop(); // dblclickで入る余計な1点を除去
+            let finalLayer;
+            if(currentTool === 'line' && tempPoints.length >= 2) {
+                finalLayer = L.polyline(tempPoints, { color: currentColor, weight: 3 }).addTo(drawLayerGroup);
+            } else if(currentTool === 'poly' && tempPoints.length >= 3) {
+                finalLayer = L.polygon(tempPoints, { color: currentColor, fillOpacity: 0.2, weight: 2 }).addTo(drawLayerGroup);
+            }
+            if(finalLayer) addEraserEvent(finalLayer);
+        }
+        resetTemp();
+    });
+        
+    // 📍 ジャンプ機能
+    let inputMarker = null;
+    let lastJumpInput = "";
+    function jumpToLocation() {
+        const input = prompt("住所・施設または 緯度,経度 を入力してください。", lastJumpInput);
+        if (!input) return;
+        lastJumpInput = input;
+        if (inputMarker) { map.removeLayer(inputMarker); }
+        if (input.includes(",")) {
+            const parts = input.split(",");
+            const lat = parseFloat(parts[0]); const lng = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                map.setView([lat, lng], 16);
+                inputMarker = L.marker([lat, lng]).addTo(map).bindPopup(input).openPopup();
+            }
+        } else {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=jp&q=${encodeURIComponent(input)}`)
+            .then(res => res.json()).then(data => {
+                if (data.length > 0) {
+                    const p = data[0];
+                    map.setView([p.lat, p.lon], 16);
+                    inputMarker = L.marker([p.lat, p.lon]).addTo(map).bindPopup(p.display_name).openPopup();
+                }
+            });
+        }
+    }
+
     function loadChome(idx) {
-      fetch(`geo_0_町丁目境界${idx}.geojson`)
-        .then(res => res.json())
-        .then(data => {
-
+      fetch(`geo_0_町丁目境界${idx}.geojson`).then(res => res.json()).then(data => {
           layerGroups[`町丁目境界${idx}`] = L.geoJSON(data, {
             renderer: myRenderer,
-
-            style: {
-              color: "red",
-              weight: 1,
-              fillOpacity: 0.03   // ★ 0にしない（スマホ対策）
-            },
-
+            style: { color: "red", weight: 1, fillOpacity: 0.03 },
             onEachFeature: (f, l) => {
-
-              const content =
-                `<strong>${f.properties["町丁目名"]}</strong><br>` +
-                `人口：${f.properties["JINKO"] ?? "不明"}`;
-
-              const isTouch = 'ontouchstart' in window;
-
-              // ===== PC：マウスオーバー =====
-              if (!isTouch) {
-                l.bindTooltip(content, {
-                  sticky: true,
-                  opacity: 0.9,
-                  direction: "auto"
-                });
-              }
-
-              // ===== スマホ：タップ =====
+              const content = `<strong>${f.properties["町丁目名"]}</strong><br>人口：${f.properties["JINKO"] ?? "不明"}`;
               l.bindPopup(content);
-
-              // ===== 視覚フィードバック =====
               l.on({
-                mouseover: e => {
-                  e.target.setStyle({
-                    weight: 3,
-                    color: "#ff0000",
-                    fillOpacity: 0.15
-                  });
-                },
-
-                mouseout: e => {
-                  e.target.setStyle({
-                    weight: 1,
-                    color: "red",
-                    fillOpacity: 0.03
-                  });
-                },
-
+                mouseover: e => e.target.setStyle({ weight: 3, color: "#ff0000", fillOpacity: 0.15 }),
+                mouseout: e => e.target.setStyle({ weight: 1, color: "red", fillOpacity: 0.03 }),
               });
             }
           });
-
-        })
-        .catch(err => console.error(err));
+      });
     }
 
     fetch("geo_22_1.geojson").then(res => res.json()).then(data => {
@@ -474,22 +444,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["病院"] || "circle",
                 fillColor: colorMap["赤"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -503,22 +468,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["診療所"] || "circle",
                 fillColor: colorMap["青"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -532,22 +492,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["歯科"] || "circle",
                 fillColor: colorMap["黄"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -561,22 +516,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["助産院"] || "circle",
                 fillColor: colorMap["赤"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -590,22 +540,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["薬局"] || "circle",
                 fillColor: colorMap["緑"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -619,22 +564,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["訪問介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -648,22 +588,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["訪問入浴介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -677,22 +612,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["訪問看護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -706,22 +636,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["訪問リハビリテーション"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -735,22 +660,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["通所介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -764,22 +684,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["通所介護（療養通所介護）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -793,22 +708,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["通所リハビリテーション"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -822,22 +732,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["福祉用具貸与"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -851,22 +756,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["短期入所生活介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -880,22 +780,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["短期入所療養介護（介護老人保健施設）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -909,22 +804,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["短期入所療養介護（療養病床を有する病院等）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -938,22 +828,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["短期入所療養介護（介護医療院）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -967,22 +852,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["認知症対応型共同生活介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -996,22 +876,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（有料老人ホーム）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1025,22 +900,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（軽費老人ホーム）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1054,22 +924,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1083,22 +948,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（有料老人ホーム・外部サービス利用型）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1112,22 +972,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（軽費老人ホーム・外部サービス利用型）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1141,22 +996,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅・外部サービス利用型）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1170,22 +1020,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["地域密着型特定施設入居者生活介護（有料老人ホーム）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1199,22 +1044,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["地域密着型特定施設入居者生活介護（軽費老人ホーム）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1228,22 +1068,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["地域密着型特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1257,22 +1092,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["特定福祉用具販売"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1286,22 +1116,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["居宅介護支援"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1315,22 +1140,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["介護老人福祉施設"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1344,22 +1164,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["介護老人保健施設"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1373,22 +1188,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["介護療養型医療施設"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1402,22 +1212,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["地域密着型介護老人福祉施設入所者生活介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1431,22 +1236,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["介護医療院"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1460,22 +1260,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["夜間対応型訪問介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1489,22 +1284,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["認知症対応型通所介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1518,22 +1308,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["小規模多機能型居宅介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1547,22 +1332,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["定期巡回・随時対応型訪問介護看護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1576,22 +1356,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["看護小規模多機能型居宅介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
@@ -1605,67 +1380,36 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                 radius: 12,
                 shape: shapeMap["地域密着型通所介護"] || "circle",
                 fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
+                color: "#fff", weight: 1.5, fillOpacity: 0.8
             }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
+                { maxWidth: 260 }
             ),
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
-                        document.getElementById('search-input').blur();
                     }
                 });
             }
         });
     }).catch(e => {});
     
-    // 初期読み込み実行
     for(let i=1; i<=8; i++) { loadChome(i.toString().padStart(2, '0')); }
 
     document.querySelectorAll('.layer-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
             const g = layerGroups[this.value];
-            if (!g) return;
-            if (this.checked) {
-                g.addTo(map);
-                
-                // ★ ズーム変更でズレた座標を、現在の地図に合わせて強制計算し直す
-                setTimeout(() => {
-                    if (g.eachLayer) {
-                        g.eachLayer(layer => {
-                            // マーカー（病院など）の場合：座標を上書きして再描画を促す
-                            if (layer.getLatLng && layer.setLatLng) {
-                                layer.setLatLng(layer.getLatLng());
-                            } 
-                            // 境界線（町丁目など）の場合：スタイルを更新して再描画を促す
-                            else if (layer.setStyle) {
-                                layer.setStyle({});
-                            }
-                        });
-                    }
-                    // キャンバス全体のリフレッシュ
-                    if (myRenderer) myRenderer.redraw();
-                }, 10); 
-            } else {
-                map.removeLayer(g);
-            }
+            if (g) { if (this.checked) g.addTo(map); else map.removeLayer(g); }
         });
     });
 
-    // 検索機能
     document.getElementById('search-input').oninput = function(e) {
         const val = e.target.value.toLowerCase().trim();
         const resDiv = document.getElementById('search-results');
-        resDiv.innerHTML = '';
-        if(!val) return;
+        resDiv.innerHTML = ''; if(!val) return;
         const keywords = val.split(/[\s　]+/);
         for (let label in layerGroups) {
             if (label.includes("町丁目境界") || !layerGroups[label]) continue;
@@ -1677,37 +1421,12 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     item.style = "padding:8px; border-bottom:1px solid #eee; font-size:13px;";
                     item.innerText = l.feature.properties["内容"];
                     item.onclick = () => {
-
-                        const layer = layerGroups[label];
-
-                          // ② 検索パネルを閉じる
-                          const searchPanel = document.getElementById('search-panel');
-                          searchPanel.style.display = 'none';
-
-                          // ③ 検索入力をクリアは今回は中止します
-                          const searchInput = document.getElementById('search-input');
-                          // 検索結果のクリア中止const searchResults = document.getElementById('search-results');
-                          // 検索文字のクリア中止searchInput.value = '';
-                          // 検索の中止searchResults.innerHTML = '';
-
-                          // ★ そのマーカーだけ表示
-                          if (!map.hasLayer(l)) {
-                              l.addTo(map);
-                          }
-
-                          // ④ ★ ソフトキーボードを確実に閉じる（超重要）
-                          searchInput.blur();
-                                                
-                          // ⑤ ズームしない＆移動
-                          map.panTo(l.getLatLng(), {
-                              animate: true
-                          });
-
-                          // ⑥ 描画完了後に popup を開く（スマホ安定）
-                          setTimeout(() => {
-                              l.openPopup();
-                          }, 250);
-                      };
+                        document.getElementById('search-panel').style.display = 'none';
+                        document.getElementById('search-input').blur();
+                        if (!map.hasLayer(l)) l.addTo(map);
+                        map.panTo(l.getLatLng());
+                        setTimeout(() => l.openPopup(), 250);
+                    };
                     resDiv.appendChild(item);
                 }
             });
@@ -1717,7 +1436,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     function togglePanel(id) {
         const p = document.getElementById(id);
         const isVisible = p.style.display === 'block';
-        ['controls', 'search-panel', 'info-panel'].forEach(i => document.getElementById(i).style.display = 'none');
+        ['controls', 'search-panel', 'info-panel', 'draw-panel'].forEach(i => document.getElementById(i).style.display = 'none');
         if(!isVisible) p.style.display = 'block';
     }
 
@@ -1730,26 +1449,18 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
     document.querySelectorAll('input[name="baseLayer"]').forEach(radio => {
       radio.addEventListener('change', function() {
-
-        // ベースレイヤー切替
-        for (let key in baseLayers) {
-          map.removeLayer(baseLayers[key]);
-        }
+        for (let key in baseLayers) map.removeLayer(baseLayers[key]);
         baseLayers[this.value].addTo(map);
-
-        // ★ クレジット表示切替
-        const credit = creditText[this.value] || "";
-        document.getElementById("credit-title").innerText = credit;
+        document.getElementById("credit-title").innerText = creditText[this.value];
       });
     });
 
     function closeControlsPanel() {
-      const controls = document.getElementById('controls');
-      if (controls && controls.style.display === 'block') {
-        controls.style.display = 'none';
-      }
+      ['controls', 'search-panel'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+      });
     }
-
   </script>
 </body>
 </html>
