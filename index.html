@@ -298,33 +298,19 @@ let currentTool = null;
     let tempPolyline = null;
 
     function setTool(tool) {
-        // 修正：toolがnullの場合はトグル判定せず強制解除、かつ存在しないID参照を防ぐ
-        if (tool === null) {
-            currentTool = null;
-        } else {
-            currentTool = (currentTool === tool) ? null : tool;
-        }
-
+        currentTool = (currentTool === tool) ? null : tool;
         document.querySelectorAll('.draw-tool-btn').forEach(b => b.classList.remove('active-tool'));
-
-        if(currentTool && tool !== null) { // toolがnullでない時だけ要素を操作
-            const btn = document.getElementById('tool-' + tool);
-            if (btn) btn.classList.add('active-tool');
+        if(currentTool) {
+            document.getElementById('tool-' + tool).classList.add('active-tool');
             map.doubleClickZoom.disable(); 
         } else {
             map.doubleClickZoom.enable();
-            currentTool = null; // 念のため
         }
-
-        // 表示設定
-        const textOpt = document.getElementById('text-options');
-        const circOpt = document.getElementById('circle-options');
-        if (textOpt) textOpt.style.display = (currentTool === 'text') ? 'block' : 'none';
-        if (circOpt) circOpt.style.display = (currentTool === 'circle') ? 'block' : 'none';
-    
+        document.getElementById('text-options').style.display = (currentTool === 'text') ? 'block' : 'none';
+        document.getElementById('circle-options').style.display = (currentTool === 'circle') ? 'block' : 'none';
         resetTemp();
     }
-    
+
     function resetTemp() {
         tempPoints = [];
         if(tempPolyline) { map.removeLayer(tempPolyline); tempPolyline = null; }
@@ -361,16 +347,9 @@ let currentTool = null;
         el.style.zIndex = '10';                  // 他のボタンより前面に出す
     }
 
+
     map.on('click', (e) => {
-
-        // ★追加：マーカーや図形クリック時は何もしない
-        if (e.originalEvent && (
-            e.originalEvent.target.closest('.leaflet-marker-icon') ||
-            e.originalEvent.target.closest('.leaflet-interactive')
-        )) return;
-
         if(!currentTool || currentTool === 'eraser') return;
-    
         
         let newLayer;
         if(currentTool === 'marker') {
@@ -1579,26 +1558,28 @@ let currentTool = null;
             });
         }
     };
-
+    
     function togglePanel(id) {
         const p = document.getElementById(id);
-        if (!p) return;
         const isVisible = p.style.display === 'block';
 
-        // ★修正：draw-panelを閉じるときだけ解除する
-        if (id === 'draw-panel' && p.style.display === 'block') {
-            setTool(null);
+        // ★追加：パネルを閉じる、または切り替えるタイミングでツール選択を解除
+        if (typeof setTool === 'function') {
+            setTool(null); 
         }
+
+        // すべてのパネルを一旦非表示にする
         ['controls', 'search-panel', 'info-panel', 'draw-panel'].forEach(i => {
             const el = document.getElementById(i);
             if (el) el.style.display = 'none';
         });
 
+        // クリックされたパネルが閉じていた場合は表示する
         if (!isVisible) {
             p.style.display = 'block';
         }
     }
-
+    
     document.getElementById('selectAllBtn').onclick = () => {
         document.querySelectorAll('.layer-toggle').forEach(cb => { cb.checked = true; cb.dispatchEvent(new Event('change')); });
     };
