@@ -142,7 +142,7 @@ button.menu-sub-btn { flex: 1; min-width: 45%; padding: 8px; font-size: 11px; cu
   
   <div id="draw-btn" class="circle-btn" onclick="togglePanel('draw-panel')">🎨</div>
   <div id="draw-panel">
-    <span class="close-x" onclick="togglePanel('draw-panel')">×</span>
+    <span class="close-x" onclick="setTool(null); togglePanel('draw-panel')">×</span>
     <div class="section-title">描画ツール</div>
     <div class="btn-container" style="margin-top:5px;">
       <button class="draw-tool-btn" id="tool-marker" onclick="setTool('marker')">📍点</button>
