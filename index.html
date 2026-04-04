@@ -359,7 +359,43 @@ let currentTool = null;
         el.style.zIndex = '10';                  // 他のボタンより前面に出す
     }
 
-   
+    map.on('click', (e) => {
+        if(!currentTool || currentTool === 'eraser') return;
+        
+        let newLayer;
+        if(currentTool === 'marker') {
+            newLayer = L.marker(e.latlng).addTo(drawLayerGroup);
+        } else if(currentTool === 'circle') {
+            const r = document.getElementById('draw-radius').value;
+            newLayer = L.circle(e.latlng, { radius: Number(r), color: currentColor, fillOpacity: 0.2 }).addTo(drawLayerGroup);
+        } else if(currentTool === 'text') {
+            const txt = document.getElementById('draw-text-input').value;
+            const size = document.getElementById('draw-text-size').value;
+            const font = document.getElementById('draw-text-font').value;
+            const icon = L.divIcon({
+                className: 'draw-txt',
+                // ★ styleに「transform: translate(-50%, -50%); text-align: center;」を追加
+                html: `<div style="color:${currentColor}; font-family:${font}; font-size:${size}px; 
+                        font-weight:bold; white-space:nowrap; text-shadow:1px 1px 1px #fff;
+                        transform: translate(-50%, -50%); text-align: center;">${txt}</div>`,
+                iconSize: [0, 0],
+                iconAnchor: [0, 0] // [0,0]のままでも、CSSのtranslate(-50%, -50%)で中心合わせが可能です
+            });
+            newLayer = L.marker(e.latlng, { icon: icon }).addTo(drawLayerGroup);
+        } else if(currentTool === 'line' || currentTool === 'poly' || currentTool === 'rect') {
+            tempPoints.push(e.latlng);
+            if(currentTool === 'rect' && tempPoints.length === 2) {
+                newLayer = L.rectangle(tempPoints, { color: currentColor, weight: 2 }).addTo(drawLayerGroup);
+                tempPoints = [];
+            } else {
+                if(tempPolyline) map.removeLayer(tempPolyline);
+                tempPolyline = L.polyline(tempPoints, {color: currentColor, dashArray: '5, 5', weight: 2}).addTo(map);
+            }
+        }
+        if(newLayer) addEraserEvent(newLayer);
+    });
+
+       
     map.on('dblclick', (e) => {
         if (!currentTool) return;
 
@@ -389,21 +425,6 @@ let currentTool = null;
     });
 
         
-    map.on('dblclick', (e) => {
-        if (!currentTool) return;
-        if (currentTool === 'line' || currentTool === 'poly') {
-            tempPoints.pop(); // dblclickで入る余計な1点を除去
-            let finalLayer;
-            if(currentTool === 'line' && tempPoints.length >= 2) {
-                finalLayer = L.polyline(tempPoints, { color: currentColor, weight: 3 }).addTo(drawLayerGroup);
-            } else if(currentTool === 'poly' && tempPoints.length >= 3) {
-                finalLayer = L.polygon(tempPoints, { color: currentColor, fillOpacity: 0.2, weight: 2 }).addTo(drawLayerGroup);
-            }
-            if(finalLayer) addEraserEvent(finalLayer);
-        }
-        resetTemp();
-    });
-
 // =====================================================
 // 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
 // =====================================================
