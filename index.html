@@ -359,6 +359,35 @@ let currentTool = null;
         el.style.zIndex = '10';                  // 他のボタンより前面に出す
     }
 
+   
+    map.on('dblclick', (e) => {
+        if (!currentTool) return;
+
+        // 消しゴムモードの時だけ図形を反応（interactive）させ、それ以外はクリックを透過させる
+        const isInteractive = (currentTool === 'eraser');
+
+        if (currentTool === 'line' || currentTool === 'poly') {
+            tempPoints.pop();
+            let finalLayer;
+            if(currentTool === 'line' && tempPoints.length >= 2) {
+                finalLayer = L.polyline(tempPoints, { 
+                    color: currentColor, 
+                    weight: 3, 
+                    interactive: isInteractive 
+                }).addTo(drawLayerGroup);
+            } else if(currentTool === 'poly' && tempPoints.length >= 3) {
+                finalLayer = L.polygon(tempPoints, { 
+                    color: currentColor, 
+                    fillOpacity: 0.2, 
+                    weight: 2, 
+                    interactive: isInteractive 
+                }).addTo(drawLayerGroup);
+            }
+            if(finalLayer) addEraserEvent(finalLayer);
+        }
+        resetTemp();
+    });
+
     map.on('dblclick', (e) => {
         if (!currentTool) return;
 
