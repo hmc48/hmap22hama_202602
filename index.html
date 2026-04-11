@@ -662,11 +662,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -711,11 +715,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -760,11 +768,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -809,11 +821,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -858,11 +874,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -907,11 +927,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -956,11 +980,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1005,11 +1033,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1054,11 +1086,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1103,11 +1139,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1152,11 +1192,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1201,11 +1245,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1250,11 +1298,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1299,11 +1351,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1348,11 +1404,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1397,11 +1457,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1446,11 +1510,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1495,11 +1563,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1544,11 +1616,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1593,11 +1669,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1642,11 +1722,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1691,11 +1775,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1740,11 +1828,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1789,11 +1881,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1838,11 +1934,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1887,11 +1987,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1936,11 +2040,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -1985,11 +2093,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2034,11 +2146,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2083,11 +2199,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2132,11 +2252,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2181,11 +2305,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2230,11 +2358,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2279,11 +2411,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2328,11 +2464,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2377,11 +2517,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2426,11 +2570,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2475,11 +2623,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2524,11 +2676,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
@@ -2573,11 +2729,15 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
                 };
 
+                // star（病院）は36px、それ以外は24px
+                const size = (shape === 'star') ? 36 : 24;
+                const anchor = size / 2; // 中心点を自動計算
+
                 const svgIcon = L.divIcon({
-                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    html: `<svg viewBox="0 0 24 24" width="${size}" height="${size}"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
                     className: 'custom-svg-icon',
-                    iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    iconSize: [size, size],
+                    iconAnchor: [anchor, anchor]
                 });
 
                 return L.marker(latlng, {
