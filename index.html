@@ -429,7 +429,26 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         document.getElementById('zoom-indicator').innerText = `Zoom: ${zoom}`;
     }
     updateZoomIndicator();
-    map.on('zoomend', updateZoomIndicator);
+
+    map.on('zoomend moveend', () => {
+        updateZoomIndicator();
+
+        // ★ 全レイヤーを強制再描画
+        for (let key in layerGroups) {
+            const g = layerGroups[key];
+            if (!g) continue;
+
+            g.eachLayer(layer => {
+                if (layer.getLatLng && layer.setLatLng) {
+                    layer.setLatLng(layer.getLatLng());
+                } else if (layer.setStyle) {
+                    layer.setStyle({});
+                }
+            });
+        }
+
+        if (myRenderer) myRenderer.redraw();
+    });
     
     const baseLayers = {
       "標準": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19 }),
