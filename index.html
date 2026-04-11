@@ -2,7 +2,6 @@
 <html lang="ja">
 <head>
 
-<!-- GA4の計測タグ -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-R23Q109BZT"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -15,11 +14,12 @@
 <title>医療・介護施設マップ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css">
 <style>
 body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #map { height:100vh; width:100vw; z-index:1; }
 #map-title-bar {
-  position: fixed; top: 10px; left: 10px; z-index: 4000;
+  position: fixed; top: 10px; left: 50px; z-index: 4000;
   background: #ffe4e1; padding: 5px 12px; border-radius: 4px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3); color: black;
   display: flex; align-items: baseline; white-space: nowrap; pointer-events: none;
@@ -39,6 +39,7 @@ body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #control-btn { top:15px; right:15px; background:#007bff; color:white; }
 #search-btn { top:75px; right:15px; background:#28a745; color:white; }
 #info-btn { top:135px; right:15px; background:#ff69b4; color:white; }
+#jump-btn { top:195px; right:15px; background:#ff9800; color:white; }
 #controls, #search-panel, #info-panel {
   display:none; position:fixed; right:15px; width:220px; 
   background:white; padding:15px; border-radius:8px; z-index:2000;
@@ -49,19 +50,82 @@ body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #info-panel { bottom:20px; left:20px; right:20px; width:auto; font-size:14px; z-index:3000; }
 .close-x { float: right; font-size: 30px; font-weight: bold; cursor: pointer; color: #888; }
 .section-title { font-weight:bold; margin-top:10px; border-bottom:1px solid #eee; }
+
 .layer-item { margin-bottom: 8px; font-size: 14px; display: flex; align-items: center; }
 input[type="checkbox"], input[type="radio"] { margin-right: 10px; transform: scale(1.2); }
-button.menu-sub-btn { margin: 5px 1%; padding: 8px; width: 46%; font-size: 11px; }
-/* --- ここを修正：ボタンを横並びにする設定 --- */
+
+/* 追加：カラーパレット用ボタンのスタイル */
+.pm-color-picker-container {
+  margin-top: 5px !important;
+  border-top: 1px solid #ccc;
+  padding-top: 5px;
+}
+.pm-color-btn {
+  width: 34px; height: 34px; background: white; border: 2px solid rgba(0,0,0,0.2);
+  border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-sizing: border-box;
+}
+.pm-color-btn:hover { background: #f4f4f4; }
+#pm-color-input {
+  position: absolute; opacity: 0; width: 34px; height: 34px; cursor: pointer;
+}
+
+/* 追加：テキスト設定パネルのスタイル */
+#text-config-panel {
+  display:none; position:fixed; left:60px; top:200px; 
+  background:white; padding:10px; border-radius:8px; z-index:4000;
+  box-shadow:0 2px 10px rgba(0,0,0,0.2); width: 180px;
+}
+.config-item { margin-bottom: 8px; font-size: 12px; }
+.config-item label { display: block; font-weight: bold; margin-bottom: 3px; }
+.config-item input, .config-item select { width: 100%; padding: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+
 .btn-container { display: flex; gap: 5px; margin-bottom: 5px; }
 button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
-/* -------------------------------------- */
 .search-item:hover { background:#f0f0f0; cursor:pointer; }
-</style>
+    /* 施設マーカーを最前面（z-index: 650）に固定 */
+    .leaflet-facilityPane-pane {
+      z-index: 650 !important;
+      pointer-events: none; /* ペイン自体は下の地図操作を邪魔しない */
+    }
+
+    /* アイコン要素だけはマウスに反応（人差し指カーソル）させる */
+    .leaflet-facilityPane-pane .custom-svg-icon {
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    /* 図形描画レイヤーをマーカーより下に配置 */
+    .leaflet-overlay-pane {
+      z-index: 400 !important;
+    }
+  </style>
+
 </head>
 <body>
   <div id="map-title-bar"><span id="main-title">浜松市版</span> <span id="credit-title">© OpenStreetMap</span></div>
   <div id="zoom-indicator">Zoom: --</div>
+
+  <div id="text-config-panel">
+    <div class="config-item">
+      <label>表示テキスト</label>
+      <input type="text" id="custom-text-input" placeholder="文字を入力">
+    </div>
+    <div class="config-item">
+      <label>フォントサイズ (px)</label>
+      <input type="number" id="custom-text-size" value="16" min="8" max="100">
+    </div>
+    <div class="config-item">
+      <label>フォント種類</label>
+      <select id="custom-text-family">
+        <option value="'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif">ゴシック体</option>
+        <option value="'Hiragino Mincho ProN', 'MS Mincho', serif">明朝体</option>
+        <option value="'Courier New', monospace">等幅フォント</option>
+      </select>
+    </div>
+    <div style="font-size:10px; color:#666; margin-bottom: 5px;">※現在のパレット色が適用されます。<br>※地図をクリックして配置。</div>
+    <button onclick="toggleTextMode(false)" style="width:100%; padding:5px; cursor:pointer;">パネルを閉じる</button>
+  </div>
 
   <div id="control-btn" class="circle-btn" onclick="togglePanel('controls')">🛠️</div>
   <div id="controls">
@@ -129,12 +193,11 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   <div id="search-btn" class="circle-btn" onclick="togglePanel('search-panel')">🔍</div>
   <div id="search-panel">
     <input type="text" id="search-input" placeholder="and検索（例：内科 五反田）" style="width:100%; padding:10px; box-sizing:border-box;">
+    <button id="show-all-results-btn" style="width:100%; margin-top:10px; padding:8px; cursor:pointer; background:#28a745; color:white; border:none; border-radius:4px; font-weight:bold;">検索結果をすべて表示</button>
     <div id="search-results" style="max-height:200px; overflow-y:auto; margin-top:10px;"></div>
   </div>
   <div id="info-btn" class="circle-btn" onclick="togglePanel('info-panel')">i</div>
-  <div id="jump-btn" class="circle-btn"
-       style="top:195px; right:15px; background:#ff9800; color:white;"
-       onclick="jumpToLocation()">📍</div>
+  <div id="jump-btn" class="circle-btn" onclick="jumpToLocation()">📍</div>
   <div id="info-panel" onclick="this.style.display='none'">
     <strong>医療・介護施設マップ　　　　★閉じる★</strong><br>
     <span style="color:red;">★</span>病院
@@ -170,14 +233,13 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script>
   <script>
     const colorMap = {"赤": "red", "青": "blue", "オレンジ": "orange", "緑": "green", "茶": "brown", "黄": "yellow"};
     const shapeMap = {"病院": "star", "診療所": "heart", "歯科": "club", "助産院": "square", "薬局": "spade"};
 
-    // 1. レンダラーの初期化（Canvasを使用）
     const myRenderer = L.canvas({ padding: 0.5 });
 
-    // 2. カスタムマーカー定義（Canvas直接描画で高速化）
     L.CustomMarker = L.CircleMarker.extend({
         _updatePath: function () {
             const ctx = this._renderer._ctx;
@@ -219,32 +281,149 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         }
     });
 
-    // 3. 地図初期化
     const map = L.map('map', { 
         center: [34.710233985604596, 137.70251668848428], zoom: 15, preferCanvas: true, zoomControl: false 
     });
 
-    // ★↓↓ ここに追加 ↓↓
+    // 追加：施設マーカー専用の最前面ペインを作成
+    map.createPane('facilityPane');
+    map.getPane('facilityPane').style.zIndex = 650;
+
+    // --- Leaflet-geoman 初期化 ---
+    map.pm.setLang('ja');
+    
+    // オプションは無料版で有効なものだけに整理
+    map.pm.setGlobalOptions({
+      snappable: true,
+      cursorMarker: true
+    });
+
+    // --- 【修正箇所】手動で半径を表示するロジックを追加 ---
+    map.on('pm:drawstart', ({ workingLayer }) => {
+      // 図形描画が始まったらテキストモードのパネルを閉じる
+      toggleTextMode(false); 
+
+      if (workingLayer instanceof L.Circle) {
+        workingLayer.on('pm:change', (e) => {
+          const radius = Math.round(e.layer.getRadius());
+          e.layer.bindTooltip(`半径: ${radius} m`, {
+            permanent: true,
+            direction: 'right',
+            className: 'js-measuring-tooltip'
+          }).openTooltip();
+        });
+      }
+    });
+
+    map.pm.addControls({
+      position: 'topleft',
+      drawCircleMarker: false,
+      drawText: false,
+      rotateMode: false,
+      drawMarker: true,
+      drawPolyline: true,
+      drawRectangle: true,
+      drawPolygon: true,
+      drawCircle: true,
+      editMode: false,
+      dragMode: true,
+      cutPolygon: false,
+      removalMode: true,
+    });
+
+    // --- 描画色の初期値管理 ---
+    let currentSelectedColor = "#3388ff";
+
+    // --- テキストモードの管理 ---
+    let isTextMode = false;
+    function toggleTextMode(active) {
+      isTextMode = active;
+      document.getElementById('text-config-panel').style.display = active ? 'block' : 'none';
+      if(active) {
+        map.getContainer().style.cursor = 'crosshair';
+        map.pm.disableDraw(); // Ｔを押した時は図形描画ツールを解除
+      } else {
+        map.getContainer().style.cursor = '';
+      }
+    }
+
+    // 地図クリック時のテキスト配置処理
+    map.on('click', (e) => {
+      if (isTextMode) {
+        const text = document.getElementById('custom-text-input').value || "テキスト";
+        const size = document.getElementById('custom-text-size').value;
+        const family = document.getElementById('custom-text-family').value;
+        
+        const textIcon = L.divIcon({
+          html: `<div style="color:${currentSelectedColor}; font-size:${size}px; font-family:${family}; white-space:nowrap; font-weight:bold; transform: translate(-50%, -50%); text-align: center;">${text}</div>`,
+          className: 'custom-text-marker',
+          iconSize: [0, 0], // サイズを0として定義
+          iconAnchor: [0, 0] // 常に中心を基準にする
+        });
+
+        const marker = L.marker(e.latlng, { icon: textIcon }).addTo(map);
+        
+        // Geomanのドラッグと削除を有効にする設定
+        marker.pm.enable(); 
+      } else {
+        closeControlsPanel();
+      }
+    });
+
+    // 追加：文字入力起動アイコン と カラーパレット（位置調整版）
+    const CustomActionControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function() {
+        const container = L.DomUtil.create('div', 'leaflet-bar');
+        
+        // 1. テキスト入力起動ボタン（Ｔ）
+        const textBtn = L.DomUtil.create('a', 'pm-text-btn', container);
+        textBtn.innerHTML = 'Ｔ';
+        textBtn.title = "テキストの追加";
+        textBtn.style.cursor = "pointer";
+        textBtn.style.display = "flex";
+        textBtn.style.alignItems = "center";
+        textBtn.style.justifyContent = "center";
+        textBtn.style.fontWeight = "bold";
+        textBtn.style.fontSize = "16px";
+        textBtn.onclick = (e) => {
+          e.preventDefault();
+          toggleTextMode(!isTextMode);
+        };
+
+        // 2. カラーパレット（最下部に配置）
+        const colorBtnContainer = L.DomUtil.create('div', 'pm-color-picker-container', container);
+        const btn = L.DomUtil.create('div', 'pm-color-btn', colorBtnContainer);
+        btn.innerHTML = '🎨';
+        btn.title = "描画色の変更";
+        
+        const input = L.DomUtil.create('input', '', btn);
+        input.type = 'color';
+        input.id = 'pm-color-input';
+        input.value = currentSelectedColor;
+
+        input.oninput = (e) => {
+          currentSelectedColor = e.target.value;
+          map.pm.setPathOptions({
+            color: currentSelectedColor,
+            fillColor: currentSelectedColor,
+            fillOpacity: 0.3
+          });
+          btn.style.borderBottom = `10px solid ${currentSelectedColor}`;
+        };
+
+        L.DomEvent.disableClickPropagation(container);
+        return container;
+      }
+    });
+    map.addControl(new CustomActionControl());
 
     function updateZoomIndicator() {
         const zoom = map.getZoom();
         document.getElementById('zoom-indicator').innerText = `Zoom: ${zoom}`;
     }
-
-    // 初期表示時に1回実行
     updateZoomIndicator();
-
-    // ズーム変更時に更新
     map.on('zoomend', updateZoomIndicator);
-
-    // ★↑↑ ここまで追加 ↑↑    
-
-
-    
-    
-    map.on('click', () => {
-      closeControlsPanel();
-    });
     
     const baseLayers = {
       "標準": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 21, maxNativeZoom: 19 }),
@@ -252,7 +431,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
       "航空写真": L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { maxZoom: 21, maxNativeZoom: 18 })
     };
     baseLayers["標準"].addTo(map);
-      const creditText = {
+    const creditText = {
       "標準": "© OpenStreetMap",
       "航空写真": "© 国土地理院（航空写真）",
       "国土地理院地図": "© 国土地理院"
@@ -260,9 +439,9 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
     const layerGroups = {};
 
-// =====================================================
-// 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
-// =====================================================
+    // =====================================================
+    // 📍 住所／緯度経度ジャンプ機能（既存構造完全維持型）
+    // =====================================================
     let inputMarker = null;
     let lastJumpInput = ""; // ★ここに追加：入力値を保存する変数
 
@@ -469,24 +648,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
     fetch("geo_22_1.geojson").then(res => res.json()).then(data => {
         layerGroups["病院"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["病院"] || "circle",
-                fillColor: colorMap["赤"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["病院"] || "circle";
+                const color = colorMap["赤"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -498,24 +697,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_2.geojson").then(res => res.json()).then(data => {
         layerGroups["診療所"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["診療所"] || "circle",
-                fillColor: colorMap["青"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["診療所"] || "circle";
+                const color = colorMap["青"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -527,24 +746,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_3.geojson").then(res => res.json()).then(data => {
         layerGroups["歯科"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["歯科"] || "circle",
-                fillColor: colorMap["黄"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["歯科"] || "circle";
+                const color = colorMap["黄"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -556,24 +795,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_4.geojson").then(res => res.json()).then(data => {
         layerGroups["助産院"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["助産院"] || "circle",
-                fillColor: colorMap["赤"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["助産院"] || "circle";
+                const color = colorMap["赤"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -585,24 +844,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_5.geojson").then(res => res.json()).then(data => {
         layerGroups["薬局"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["薬局"] || "circle",
-                fillColor: colorMap["緑"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["薬局"] || "circle";
+                const color = colorMap["緑"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -614,24 +893,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_訪問介護.geojson").then(res => res.json()).then(data => {
         layerGroups["訪問介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["訪問介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["訪問介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -643,24 +942,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_訪問入浴介護.geojson").then(res => res.json()).then(data => {
         layerGroups["訪問入浴介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["訪問入浴介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["訪問入浴介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -672,24 +991,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_訪問看護.geojson").then(res => res.json()).then(data => {
         layerGroups["訪問看護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["訪問看護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["訪問看護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -701,24 +1040,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_訪問リハビリテーション.geojson").then(res => res.json()).then(data => {
         layerGroups["訪問リハビリテーション"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["訪問リハビリテーション"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["訪問リハビリテーション"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -730,24 +1089,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_通所介護.geojson").then(res => res.json()).then(data => {
         layerGroups["通所介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["通所介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["通所介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -759,24 +1138,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_通所介護（療養通所介護）.geojson").then(res => res.json()).then(data => {
         layerGroups["通所介護（療養通所介護）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["通所介護（療養通所介護）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["通所介護（療養通所介護）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -788,24 +1187,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_通所リハビリテーション.geojson").then(res => res.json()).then(data => {
         layerGroups["通所リハビリテーション"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["通所リハビリテーション"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["通所リハビリテーション"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -817,24 +1236,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_福祉用具貸与.geojson").then(res => res.json()).then(data => {
         layerGroups["福祉用具貸与"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["福祉用具貸与"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["福祉用具貸与"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -846,24 +1285,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_短期入所生活介護.geojson").then(res => res.json()).then(data => {
         layerGroups["短期入所生活介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["短期入所生活介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["短期入所生活介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -875,24 +1334,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_短期入所療養介護（介護老人保健施設）.geojson").then(res => res.json()).then(data => {
         layerGroups["短期入所療養介護（介護老人保健施設）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["短期入所療養介護（介護老人保健施設）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["短期入所療養介護（介護老人保健施設）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -904,24 +1383,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_短期入所療養介護（療養病床を有する病院等）.geojson").then(res => res.json()).then(data => {
         layerGroups["短期入所療養介護（療養病床を有する病院等）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["短期入所療養介護（療養病床を有する病院等）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["短期入所療養介護（療養病床を有する病院等）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -933,24 +1432,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_短期入所療養介護（介護医療院）.geojson").then(res => res.json()).then(data => {
         layerGroups["短期入所療養介護（介護医療院）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["短期入所療養介護（介護医療院）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["短期入所療養介護（介護医療院）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -962,24 +1481,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_認知症対応型共同生活介護.geojson").then(res => res.json()).then(data => {
         layerGroups["認知症対応型共同生活介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["認知症対応型共同生活介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["認知症対応型共同生活介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -991,24 +1530,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（有料老人ホーム）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（有料老人ホーム）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（有料老人ホーム）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（有料老人ホーム）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1020,24 +1579,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（軽費老人ホーム）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（軽費老人ホーム）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（軽費老人ホーム）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（軽費老人ホーム）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1049,24 +1628,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（サービス付き高齢者向け住宅）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（サービス付き高齢者向け住宅）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1078,24 +1677,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（有料老人ホーム・外部サービス利用型）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（有料老人ホーム・外部サービス利用型）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（有料老人ホーム・外部サービス利用型）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（有料老人ホーム・外部サービス利用型）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1107,24 +1726,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（軽費老人ホーム・外部サービス利用型）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（軽費老人ホーム・外部サービス利用型）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（軽費老人ホーム・外部サービス利用型）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（軽費老人ホーム・外部サービス利用型）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1136,24 +1775,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定施設入居者生活介護（サービス付き高齢者向け住宅・外部サービス利用型）.geojson").then(res => res.json()).then(data => {
         layerGroups["特定施設入居者生活介護（サービス付き高齢者向け住宅・外部サービス利用型）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅・外部サービス利用型）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定施設入居者生活介護（サービス付き高齢者向け住宅・外部サービス利用型）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1165,24 +1824,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_地域密着型特定施設入居者生活介護（有料老人ホーム）.geojson").then(res => res.json()).then(data => {
         layerGroups["地域密着型特定施設入居者生活介護（有料老人ホーム）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["地域密着型特定施設入居者生活介護（有料老人ホーム）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["地域密着型特定施設入居者生活介護（有料老人ホーム）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1194,24 +1873,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_地域密着型特定施設入居者生活介護（軽費老人ホーム）.geojson").then(res => res.json()).then(data => {
         layerGroups["地域密着型特定施設入居者生活介護（軽費老人ホーム）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["地域密着型特定施設入居者生活介護（軽費老人ホーム）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["地域密着型特定施設入居者生活介護（軽費老人ホーム）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1223,24 +1922,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_地域密着型特定施設入居者生活介護（サービス付き高齢者向け住宅）.geojson").then(res => res.json()).then(data => {
         layerGroups["地域密着型特定施設入居者生活介護（サービス付き高齢者向け住宅）"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["地域密着型特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["地域密着型特定施設入居者生活介護（サービス付き高齢者向け住宅）"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1252,24 +1971,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_特定福祉用具販売.geojson").then(res => res.json()).then(data => {
         layerGroups["特定福祉用具販売"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["特定福祉用具販売"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["特定福祉用具販売"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1281,24 +2020,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_居宅介護支援.geojson").then(res => res.json()).then(data => {
         layerGroups["居宅介護支援"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["居宅介護支援"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["居宅介護支援"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1310,24 +2069,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_介護老人福祉施設.geojson").then(res => res.json()).then(data => {
         layerGroups["介護老人福祉施設"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["介護老人福祉施設"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["介護老人福祉施設"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1339,24 +2118,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_介護老人保健施設.geojson").then(res => res.json()).then(data => {
         layerGroups["介護老人保健施設"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["介護老人保健施設"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["介護老人保健施設"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1368,24 +2167,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_介護療養型医療施設.geojson").then(res => res.json()).then(data => {
         layerGroups["介護療養型医療施設"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["介護療養型医療施設"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["介護療養型医療施設"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1397,24 +2216,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_地域密着型介護老人福祉施設入所者生活介護.geojson").then(res => res.json()).then(data => {
         layerGroups["地域密着型介護老人福祉施設入所者生活介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["地域密着型介護老人福祉施設入所者生活介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["地域密着型介護老人福祉施設入所者生活介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1426,24 +2265,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_介護医療院.geojson").then(res => res.json()).then(data => {
         layerGroups["介護医療院"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["介護医療院"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["介護医療院"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1455,24 +2314,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_夜間対応型訪問介護.geojson").then(res => res.json()).then(data => {
         layerGroups["夜間対応型訪問介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["夜間対応型訪問介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["夜間対応型訪問介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1484,24 +2363,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_認知症対応型通所介護.geojson").then(res => res.json()).then(data => {
         layerGroups["認知症対応型通所介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["認知症対応型通所介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["認知症対応型通所介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1513,24 +2412,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_小規模多機能型居宅介護.geojson").then(res => res.json()).then(data => {
         layerGroups["小規模多機能型居宅介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["小規模多機能型居宅介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["小規模多機能型居宅介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1542,24 +2461,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_定期巡回・随時対応型訪問介護看護.geojson").then(res => res.json()).then(data => {
         layerGroups["定期巡回・随時対応型訪問介護看護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["定期巡回・随時対応型訪問介護看護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["定期巡回・随時対応型訪問介護看護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1571,24 +2510,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_看護小規模多機能型居宅介護.geojson").then(res => res.json()).then(data => {
         layerGroups["看護小規模多機能型居宅介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["看護小規模多機能型居宅介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["看護小規模多機能型居宅介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1600,24 +2559,44 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     
     fetch("geo_22_地域密着型通所介護.geojson").then(res => res.json()).then(data => {
         layerGroups["地域密着型通所介護"] = L.geoJSON(data, {
-            pointToLayer: (f, latlng) => new L.CustomMarker(latlng, {
-                renderer: myRenderer,
-                radius: 12,
-                shape: shapeMap["地域密着型通所介護"] || "circle",
-                fillColor: colorMap["茶"] || "brown",
-                color: "#fff",
-                weight: 1.5,
-                fillOpacity: 0.8
-            }).bindPopup(
+            pointToLayer: (f, latlng) => {
+                const shape = shapeMap["地域密着型通所介護"] || "circle";
+                const color = colorMap["茶"] || "brown";
+                
+                // 各形状のSVGパス定義
+                const shapes = {
+                    star: 'M12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9z',
+                    heart: 'M12,21.35L10.55,20.03C5.4,15.36 2,12.27 2,8.5C2,5.41 4.41,3 7.5,3C9.24,3 10.91,3.81 12,5.08C13.09,3.81 14.76,3 16.5,3C19.59,3 22,5.41 22,8.5C22,12.27 18.6,15.36 13.45,20.03L12,21.35Z',
+                    club: 'M12,2a3.5,3.5 0 0,1 3.5,3.5c0,1.16-.56,2.19-1.43,2.83 1.05,.26 1.93,1 2.43,1.96a3.5,3.5 0 1,1 -2.5,5.71L13,16h-2l-1-0a3.5,3.5 0 1,1 -2.5-5.71c.5-.96 1.38-1.7 2.43-1.96A3.5,3.5 0 0,1 8.5,5.5 3.5,3.5 0 0,1 12,2Z',
+                    square: 'M3,3h18v18h-18z',
+                    spade: 'M12,2C9,7 4,9 4,14C4,18 7,20 12,20C17,20 20,18 20,14C20,9 15,7 12,2M12,18V22H10V18H12Z',
+                    circle: 'M12,12 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0'
+                };
+
+                const svgIcon = L.divIcon({
+                    html: `<svg viewBox="0 0 24 24" width="24" height="24"><path d="${shapes[shape] || shapes.circle}" fill="${color}" stroke="white" stroke-width="1.5" /></svg>`,
+                    className: 'custom-svg-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+
+                return L.marker(latlng, {
+                    icon: svgIcon,
+                    pane: 'facilityPane', // 手順2で作った専用ペインに配置
+                    pmIgnore: true,       // Geomanの描画対象から除外（クリックを邪魔させない）
+                    bubblingMouseEvents: false // イベントが下の図形層に漏れるのを防ぐ
+                }).bindPopup(
                 `<strong>${f.properties["内容"] || "-"}</strong><br>
                  ${f.properties["url2"] ? `<a href='${f.properties["url2"]}' target='_blank'>ホームページ</a>` : ""}
                  ${f.properties["url"] ? ` | <a href='${f.properties["url"]}' target='_blank'>医療・介護ネット</a>` : ""}`,
-                { maxWidth: 260 }  // ★ ここで横幅制限
-            ),
+                { maxWidth: 260 }
+            );
+            },
+            // 施設マーカーをクリックしたら、描画モードとテキストモードを両方解除する
             onEachFeature: (f, l) => {
-                // タップ時に検索パネルを閉じる処理もここに追加可能
                 l.on('click', () => {
-                    // PCでは閉じない、スマホなら閉じる
+                    map.pm.disableDraw(); // Geomanの描画解除
+                    toggleTextMode(false); // カスタムテキストモード解除
                     if('ontouchstart' in window) {
                         document.getElementById('search-panel').style.display = 'none';
                         document.getElementById('search-input').blur();
@@ -1627,7 +2606,6 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         });
     }).catch(e => {});
     
-    // 初期読み込み実行
     for(let i=1; i<=8; i++) { loadChome(i.toString().padStart(2, '0')); }
 
     document.querySelectorAll('.layer-toggle').forEach(cb => {
@@ -1636,31 +2614,19 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
             if (!g) return;
             if (this.checked) {
                 g.addTo(map);
-                
-                // ★ ズーム変更でズレた座標を、現在の地図に合わせて強制計算し直す
                 setTimeout(() => {
                     if (g.eachLayer) {
                         g.eachLayer(layer => {
-                            // マーカー（病院など）の場合：座標を上書きして再描画を促す
-                            if (layer.getLatLng && layer.setLatLng) {
-                                layer.setLatLng(layer.getLatLng());
-                            } 
-                            // 境界線（町丁目など）の場合：スタイルを更新して再描画を促す
-                            else if (layer.setStyle) {
-                                layer.setStyle({});
-                            }
+                            if (layer.getLatLng && layer.setLatLng) { layer.setLatLng(layer.getLatLng()); } 
+                            else if (layer.setStyle) { layer.setStyle({}); }
                         });
                     }
-                    // キャンバス全体のリフレッシュ
                     if (myRenderer) myRenderer.redraw();
                 }, 10); 
-            } else {
-                map.removeLayer(g);
-            }
+            } else { map.removeLayer(g); }
         });
     });
 
-    // 検索機能
     document.getElementById('search-input').oninput = function(e) {
         const val = e.target.value.toLowerCase().trim();
         const resDiv = document.getElementById('search-results');
@@ -1677,40 +2643,50 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
                     item.style = "padding:8px; border-bottom:1px solid #eee; font-size:13px;";
                     item.innerText = l.feature.properties["内容"];
                     item.onclick = () => {
-
-                        const layer = layerGroups[label];
-
-                          // ② 検索パネルを閉じる
-                          const searchPanel = document.getElementById('search-panel');
-                          searchPanel.style.display = 'none';
-
-                          // ③ 検索入力をクリアは今回は中止します
-                          const searchInput = document.getElementById('search-input');
-                          // 検索結果のクリア中止const searchResults = document.getElementById('search-results');
-                          // 検索文字のクリア中止searchInput.value = '';
-                          // 検索の中止searchResults.innerHTML = '';
-
-                          // ★ そのマーカーだけ表示
-                          if (!map.hasLayer(l)) {
-                              l.addTo(map);
-                          }
-
-                          // ④ ★ ソフトキーボードを確実に閉じる（超重要）
-                          searchInput.blur();
-                                                
-                          // ⑤ ズームしない＆移動
-                          map.panTo(l.getLatLng(), {
-                              animate: true
-                          });
-
-                          // ⑥ 描画完了後に popup を開く（スマホ安定）
-                          setTimeout(() => {
-                              l.openPopup();
-                          }, 250);
-                      };
+                        map.pm.disableDraw();   // 描画を強制終了
+                        toggleTextMode(false);  // テキストモードも終了
+                        document.getElementById('search-panel').style.display = 'none';
+                        if (!map.hasLayer(l)) { l.addTo(map); }
+                        document.getElementById('search-input').blur();
+                        map.panTo(l.getLatLng(), { animate: true });
+                        setTimeout(() => { l.openPopup(); }, 250);
+                    };
                     resDiv.appendChild(item);
                 }
             });
+        }
+    };
+
+    // 追加：検索結果をすべて地図に表示する機能
+    document.getElementById('show-all-results-btn').onclick = function() {
+        const val = document.getElementById('search-input').value.toLowerCase().trim();
+        if(!val) return;
+        
+        const keywords = val.split(/[\s　]+/);
+        const bounds = []; // 全マーカーを収める表示範囲を計算用
+
+        for (let label in layerGroups) {
+            // 町丁目境界データを除外
+            if (label.includes("町丁目境界") || !layerGroups[label]) continue;
+
+            layerGroups[label].eachLayer(l => {
+                const name = (l.feature.properties["内容"] || "").toLowerCase();
+                // 全キーワードに一致する場合
+                if(keywords.every(kw => name.includes(kw))) {
+                    if (!map.hasLayer(l)) { 
+                        l.addTo(map); // 未表示なら地図に追加
+                    }
+                    bounds.push(l.getLatLng()); // 座標を蓄積
+                }
+            });
+        }
+
+        if (bounds.length > 0) {
+            // 見つかったすべてのマーカーが収まるように地図をズーム・移動　
+            map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50] });
+            document.getElementById('search-panel').style.display = 'none'; // パネルを閉じる
+        } else {
+            alert("該当する施設が見つかりません。");
         }
     };
 
@@ -1730,26 +2706,16 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
     document.querySelectorAll('input[name="baseLayer"]').forEach(radio => {
       radio.addEventListener('change', function() {
-
-        // ベースレイヤー切替
-        for (let key in baseLayers) {
-          map.removeLayer(baseLayers[key]);
-        }
+        for (let key in baseLayers) { map.removeLayer(baseLayers[key]); }
         baseLayers[this.value].addTo(map);
-
-        // ★ クレジット表示切替
-        const credit = creditText[this.value] || "";
-        document.getElementById("credit-title").innerText = credit;
+        document.getElementById("credit-title").innerText = creditText[this.value] || "";
       });
     });
 
     function closeControlsPanel() {
       const controls = document.getElementById('controls');
-      if (controls && controls.style.display === 'block') {
-        controls.style.display = 'none';
-      }
+      if (controls && controls.style.display === 'block') { controls.style.display = 'none'; }
     }
-
   </script>
 </body>
 </html>
