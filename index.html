@@ -40,6 +40,14 @@ body { margin:0; padding:0; overflow:hidden; font-family: sans-serif; }
 #search-btn { top:75px; right:15px; background:#28a745; color:white; }
 #info-btn { top:135px; right:15px; background:#ff69b4; color:white; }
 #jump-btn { top:195px; right:15px; background:#ff9800; color:white; }
+/* 追加：経路探索ボタンとパネル */
+#route-btn { top:255px; right:15px; background:#673ab7; color:white; }
+#route-panel {
+  display:none; position:fixed; top:255px; right:75px; 
+  background:white; padding:15px; border-radius:8px; z-index:4000;
+  box-shadow:0 4px 15px rgba(0,0,0,0.2); width:200px;
+}
+.route-info { margin-top:10px; padding:8px; background:#f8f9fa; border-radius:4px; font-size:12px; border:1px solid #ddd; }
 #controls, #search-panel, #info-panel {
   display:none; position:fixed; right:15px; width:220px; 
   background:white; padding:15px; border-radius:8px; z-index:2000;
@@ -72,7 +80,7 @@ input[type="checkbox"], input[type="radio"] { margin-right: 10px; transform: sca
 
 /* 追加：テキスト設定パネルのスタイル */
 #text-config-panel {
-  display:none; position:fixed; right:70px; top:255px; /* 右側に出るように変更 */
+  display:none; position:fixed; right:70px; top:305px; /* 右側に出るように変更 */
   background:white; padding:10px; border-radius:8px; z-index:4000;
   box-shadow:0 2px 10px rgba(0,0,0,0.2); width: 180px;
 }
@@ -99,7 +107,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     /* ★追加 */
     /* ★追加 */
     .leaflet-top.leaflet-right {
-      margin-top: 255px;
+      margin-top: 305px;
     }
 
     /* 図形描画レイヤーをマーカーより下に配置 */
@@ -205,6 +213,21 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
   </div>
   <div id="info-btn" class="circle-btn" onclick="togglePanel('info-panel')">i</div>
   <div id="jump-btn" class="circle-btn" onclick="jumpToLocation()">📍</div>
+  
+  <div id="route-btn" class="circle-btn" onclick="toggleRouteMode()">🚗</div>
+  
+  <div id="route-panel">
+    <div style="font-weight:bold; margin-bottom:10px;">経路探索</div>
+    <label class="layer-item"><input type="radio" name="routeMode" value="car" checked> 🚗自動車</label>
+    <label class="layer-item"><input type="radio" name="routeMode" value="foot"> 🚶 徒歩</label>
+    <hr>
+    <div id="route-status" style="font-size:11px; color:#666; margin-bottom:5px;">
+      地図上を2箇所クリックしてください
+    </div>
+    <div id="route-result" class="route-info" style="display:none;"></div>
+    <button onclick="clearRoute()" style="width:100%; margin-top:10px; cursor:pointer; padding:5px;">リセット</button>
+  </div>
+
   <div id="info-panel" onclick="this.style.display='none'">
     <strong>医療・介護施設マップ　　　　★閉じる★</strong><br>
     <span style="color:red;">★</span>病院
@@ -231,6 +254,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
     検索機能(and検索)<br>
     and検索の例:内科 秋葉原　診療所<br>
     人口表示（境界線表示時）<br>
+    線、四角形、多角形、円の描写、テキスト入力<br>
     【利用規約・ご意見・ご感想・お問い合わせ】<br>
     他都道府県は下記サイトへ<br>
     本ツールは以下のサイトで作成しています。<br>
@@ -288,6 +312,7 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         }
     });
 
+    // 緯度経度指定　各都道府県庁所在地
     const map = L.map('map', { 
         center: [34.710233985604596, 137.70251668848428], zoom: 15, preferCanvas: true, zoomControl: false 
     });
@@ -343,6 +368,99 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
 
     // --- テキストモードの管理 ---
     let isTextMode = false;
+        
+    // 【追加】経路探索用の変数
+    let isRouteMode = false;
+    let waypoints = [];
+    let routeMarkers = [];
+    let routePolyline = null;
+
+    // 【追加】経路探索モードの切り替え
+    function toggleRouteMode() {
+        isRouteMode = !isRouteMode;
+        const panel = document.getElementById('route-panel');
+        
+        if (isRouteMode) {
+            panel.style.display = 'block';
+            toggleTextMode(false); // テキストモードはOFF
+            map.pm.disableDraw(); // 図形描画もOFF
+            document.getElementById('route-status').innerText = "出発地点をクリックしてください";
+            map.getContainer().style.cursor = 'crosshair';
+        } else {
+            panel.style.display = 'none';
+            clearRoute();
+            map.getContainer().style.cursor = '';
+        }
+    }
+
+    // 【追加】経路とマーカーをクリア
+    function clearRoute() {
+        waypoints = [];
+        routeMarkers.forEach(m => map.removeLayer(m));
+        routeMarkers = [];
+        if (routePolyline) {
+            map.removeLayer(routePolyline);
+            routePolyline = null;
+        }
+        document.getElementById('route-status').innerText = "地図上を2箇所クリックしてください";
+        document.getElementById('route-result').style.display = 'none';
+    }
+
+    // 【修正版】OSRM APIを使用して経路を計算
+    async function calculateRoute() {
+        if (waypoints.length < 2) return;
+
+        const mode = document.querySelector('input[name="routeMode"]:checked').value;
+        // OSRM標準サーバーのプロファイル名に合わせて修正 ('foot' が正解)
+        const profile = mode === 'car' ? 'driving' : 'foot'; 
+        
+        const url = `https://router.project-osrm.org/route/v1/${profile}/${waypoints[0].lng},${waypoints[0].lat};${waypoints[1].lng},${waypoints[1].lat}?overview=full&geometries=geojson`;
+
+        document.getElementById('route-status').innerText = "計算中...";
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.code !== 'Ok') throw new Error("Route error");
+
+            const route = data.routes[0];
+            const distance = (route.distance / 1000).toFixed(2); // km
+            
+            let duration;
+            if (mode === 'foot') {
+                // 徒歩の場合：OSRMは速めなので、日本の基準（分＝80m）に合わせて再計算
+                // 距離(m) / 80 = 分
+                duration = Math.ceil(route.distance / 80);
+            } else {
+                // 自動車の場合：信号待ちなどを考慮し、OSRMの計算値に少し余裕（1.2倍程度）を持たせる
+                duration = Math.ceil((route.duration / 60) * 1.2);
+            }
+
+            if (routePolyline) map.removeLayer(routePolyline);
+
+            routePolyline = L.geoJSON(route.geometry, {
+                style: { 
+                    color: mode === 'car' ? '#673ab7' : '#28a745',
+                    weight: 6, 
+                    opacity: 0.7 
+                }
+            }).addTo(map);
+
+            const resDiv = document.getElementById('route-result');
+            resDiv.innerHTML = `<strong>${mode === 'car' ? '🚗 自動車' : '🚶 徒歩'}</strong><br>距離: ${distance} km<br>時間: 約 ${duration} 分`;
+            resDiv.style.display = 'block';
+            document.getElementById('route-status').innerText = "経路表示の所要時間は理論上の最短時間であり、標準的なOSRMエンジンは交差点での停止・加速などの実際のロスを完全には考慮していません。";
+
+        } catch (error) {
+            console.error(error);
+            alert("経路の取得に失敗しました。");
+            clearRoute();
+        }
+    }
+
+    // (ここから下は既存の toggleTextMode(active) や map.on('click', ...) を継続)
+
     function toggleTextMode(active) {
       isTextMode = active;
       document.getElementById('text-config-panel').style.display = active ? 'block' : 'none';
@@ -354,8 +472,26 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
       }
     }
 
-    // 地図クリック時のテキスト配置処理
+    // --- 地図クリック時の処理（経路探索・テキスト配置・パネル閉じを統合） ---
     map.on('click', (e) => {
+      // 1. 【追加】経路探索モードがONの場合
+      if (isRouteMode) {
+        if (waypoints.length < 2) {
+          waypoints.push(e.latlng);
+          // クリック地点に一時的なマーカーを設置
+          const m = L.marker(e.latlng).addTo(map);
+          routeMarkers.push(m);
+
+          if (waypoints.length === 1) {
+            document.getElementById('route-status').innerText = "目的地をクリックしてください";
+          } else if (waypoints.length === 2) {
+            calculateRoute(); // 2点揃ったら計算開始
+          }
+        }
+        return; // 経路探索中は、以降のテキスト処理などは行わずに終了する
+      }
+
+      // 2. 【既存】テキスト配置モード（Ｔアイコン）がONの場合
       if (isTextMode) {
         const text = document.getElementById('custom-text-input').value || "テキスト";
         const size = document.getElementById('custom-text-size').value;
@@ -364,15 +500,17 @@ button.menu-sub-btn { flex: 1; padding: 8px; font-size: 11px; cursor: pointer; }
         const textIcon = L.divIcon({
           html: `<div style="color:${currentSelectedColor}; font-size:${size}px; font-family:${family}; white-space:nowrap; font-weight:bold; transform: translate(-50%, -50%); text-align: center;">${text}</div>`,
           className: 'custom-text-marker',
-          iconSize: [0, 0], // サイズを0として定義
-          iconAnchor: [0, 0] // 常に中心を基準にする
+          iconSize: [0, 0], 
+          iconAnchor: [0, 0] 
         });
 
         const marker = L.marker(e.latlng, { icon: textIcon }).addTo(map);
         
         // Geomanのドラッグと削除を有効にする設定
         marker.pm.enable(); 
-      } else {
+      } 
+      // 3. 【既存】どちらのモードでもない場合
+      else {
         closeControlsPanel();
       }
     });
